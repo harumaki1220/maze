@@ -1,59 +1,114 @@
 'use client';
 
+import { useEffect, useState } from 'react';
 import styles from './page.module.css';
 
+const directions = [
+  [-1, 0], // 上
+  [1, 0], // 下
+  [0, -1], // 左
+  [0, 1], // 右
+];
+
+const MAZE_WIDTH = 25;
+const MAZE_HEIGHT = 25;
+
+const CELL_TYPE = {
+  PATH: 0,
+  WALL: 1,
+  START: 2,
+  GOAL: 3,
+};
+
+const initializeBoard = (cell: number = 0) => {
+  const newBoard = Array.from({ length: MAZE_HEIGHT }, () =>
+    Array.from({ length: MAZE_WIDTH }, () => cell),
+  );
+
+  // 外壁
+  for (let y = 0; y < MAZE_HEIGHT; y++) {
+    for (let x = 0; x < MAZE_WIDTH; x++) {
+      if (y === 0 || y === MAZE_HEIGHT - 1 || x === 0 || x === MAZE_WIDTH - 1) {
+        newBoard[y][x] = CELL_TYPE.WALL;
+      }
+    }
+  }
+
+  // 1マスごとに壁
+  for (let y = 2; y < MAZE_HEIGHT - 1; y += 2) {
+    for (let x = 2; x < MAZE_WIDTH - 1; x += 2) {
+      newBoard[y][x] = CELL_TYPE.WALL;
+    }
+  }
+
+  // スタート&ゴールの定義
+  newBoard[1][1] = CELL_TYPE.START;
+  newBoard[MAZE_HEIGHT - 2][MAZE_WIDTH - 2] = CELL_TYPE.GOAL;
+
+  return newBoard;
+};
+
 export default function Home() {
+  const [board, setboard] = useState<number[][]>([]);
+
+  useEffect(() => {
+    setboard(initializeBoard());
+  }, []);
+
+  const generateMaze = () => {
+    const newBoard = initializeBoard();
+    for (let y = 2; y < MAZE_HEIGHT - 1; y += 2) {
+      for (let x = 2; x < MAZE_WIDTH - 1; x += 2) {
+        let validDirections = directions.filter(([dy, dx]) => {
+          const newY = y + dy * 2; // 2マス先が壁でないことを確認
+          const newX = x + dx * 2;
+          return (
+            newY > 0 &&
+            newY < MAZE_HEIGHT - 1 &&
+            newX > 0 &&
+            newX < MAZE_WIDTH - 1 &&
+            newBoard[newY][newX] === CELL_TYPE.PATH
+          );
+        });
+
+        // 最初の行(y=2)の棒は上には倒さない
+        if (y === 2) {
+          validDirections = validDirections.filter(([dy]) => dy !== -1);
+        }
+
+        const [dy, dx] = directions[Math.floor(Math.random() * directions.length)];
+        newBoard[y + dy][x + dx] = CELL_TYPE.WALL;
+      }
+    }
+    setboard(newBoard);
+  };
+
   return (
     <div className={styles.container}>
-      <main className={styles.main}>
-        <h1 className={styles.title}>
-          Welcome to <a href="https://nextjs.org">Next.js!</a>
-        </h1>
-
-        <p className={styles.description}>
-          Get started by editing{' '}
-          <code className={styles.code} style={{ backgroundColor: '#fafafa' }}>
-            src/app/page.tsx
-          </code>
-        </p>
-
-        <div className={styles.grid}>
-          <a className={styles.card} href="https://nextjs.org/docs">
-            <h2>Documentation &rarr;</h2>
-            <p>Find in-depth information about Next.js features and API.</p>
-          </a>
-
-          <a className={styles.card} href="https://nextjs.org/learn">
-            <h2>Learn &rarr;</h2>
-            <p>Learn about Next.js in an interactive course with quizzes!</p>
-          </a>
-
-          <a className={styles.card} href="https://github.com/vercel/next.js/tree/master/examples">
-            <h2>Examples &rarr;</h2>
-            <p>Discover and deploy boilerplate example Next.js projects.</p>
-          </a>
-
-          <a
-            className={styles.card}
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=default-template&utm_campaign=create-next-app"
-          >
-            <h2>Deploy &rarr;</h2>
-            <p>Instantly deploy your Next.js site to a public URL with Vercel.</p>
-          </a>
-        </div>
-      </main>
-      <footer className={styles.footer}>
-        <a
-          href="https://vercel.com?utm_source=create-next-app&utm_medium=default-template&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Powered by{' '}
-          <span className={styles.logo}>
-            <img src="vercel.svg" alt="Vercel Logo" width={72} height={16} />
-          </span>
-        </a>
-      </footer>
+      <h1>ジェミナイ(仮)が迷路を自動で解くよ！！</h1>
+      <div className={styles.board} style={{ gridTemplateColumns: `repeat(${MAZE_WIDTH}, 20px)` }}>
+        {board.map((row, y) =>
+          row.map((cell, x) => (
+            <div
+              className={styles.cell}
+              key={`${x}-${y}`}
+              style={{
+                backgroundColor:
+                  cell === CELL_TYPE.WALL
+                    ? '#333' // 壁
+                    : cell === CELL_TYPE.START
+                      ? '#4caf50' // スタート
+                      : cell === CELL_TYPE.GOAL
+                        ? '#f44336' // ゴール
+                        : '#fff', // 道
+              }}
+            />
+          )),
+        )}
+      </div>
+      <button onClick={generateMaze} className={styles.button}>
+        迷路を生成
+      </button>
     </div>
   );
 }
